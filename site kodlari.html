@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>UVOS FINAL PRO</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  margin:0;
+  font-family:Arial;
+  background:black;
+  color:white;
+  overflow:hidden;
+}
+
+canvas#stars {
+  position:fixed;
+  top:0;
+  left:0;
+  z-index:-1;
+}
+
+.navbar {
+  display:flex;
+  justify-content:space-between;
+  padding:15px;
+  background:#111;
+}
+
+.section { display:none; padding:30px; text-align:center; }
+.active { display:block; }
+
+button {
+  padding:10px;
+  background:cyan;
+  border:none;
+  cursor:pointer;
+}
+
+.login { margin-top:100px; }
+
+#chart {
+  max-width:400px;
+  margin:20px auto;
+}
+
+#aiBox {
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:300px;
+  background:#111;
+  padding:10px;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="navbar">
+  <b>UVOS</b>
+  <div>
+    <a onclick="show('dashboard')">Dashboard</a>
+    <a onclick="show('services')">Hizmetler</a>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login" class="section active login">
+  <h1>Giriş</h1>
+  <input id="user" placeholder="admin">
+  <input id="pass" type="password" placeholder="1234"><br><br>
+  <button onclick="login()">Giriş</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section">
+  <h2>Veri Analiz Paneli</h2>
+
+  <select id="mission">
+    <option>Hava Durumu Uydusu</option>
+    <option>Askeri Uydu</option>
+    <option>GPS Uydusu</option>
+  </select>
+
+  <canvas id="chart"></canvas>
+  <p id="stats"></p>
+
+  <button onclick="simulate()">Analiz Başlat</button>
+</div>
+
+<!-- SERVICES -->
+<div id="services" class="section">
+  <h2>Randevu</h2>
+  <input id="name" placeholder="Ad">
+  <input id="date" type="date">
+  <button onclick="appoint()">Kaydet</button>
+  <p id="result"></p>
+</div>
+
+<!-- AI -->
+<div id="aiBox">
+  <div id="chat" style="height:150px;overflow:auto;"></div>
+  <input id="msg">
+  <button onclick="send()">Gönder</button>
+</div>
+
+<button onclick="openAI()" style="position:fixed;bottom:20px;right:20px;">🤖</button>
+
+<script>
+
+let chart = null;
+
+// LOGIN
+function login(){
+  let u=document.getElementById("user").value;
+  let p=document.getElementById("pass").value;
+
+  if(u==="admin" && p==="1234"){
+    document.getElementById("login").style.display="none";
+    show("dashboard");
+    setTimeout(initChart,300);
+  } else alert("Hatalı!");
+}
+
+// SHOW
+function show(id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// CHART
+function initChart(){
+  let ctx=document.getElementById("chart").getContext("2d");
+
+  if(chart) chart.destroy();
+
+  chart=new Chart(ctx,{
+    type:"doughnut",
+    data:{
+      labels:["Kurtarılan","Hatalı","Kayıp"],
+      datasets:[{
+        data:[70,20,10],
+        backgroundColor:[
+          "rgba(0,255,255,0.9)",
+          "rgba(255,0,0,0.8)",
+          "rgba(150,150,150,0.7)"
+        ],
+        borderWidth:2,
+        borderColor:"#000",
+        hoverOffset:15
+      }]
+    },
+    options:{
+      plugins:{
+        legend:{ position:"bottom", labels:{ color:"white" } }
+      },
+      animation:{ duration:1500 }
+    }
+  });
+}
+
+// 🚀 MISSION ANALİZ (FARKLI DAVRANIŞ)
+function simulate(){
+
+  if(!chart) initChart();
+
+  let mission = document.getElementById("mission").value;
+
+  let r,e,l;
+
+  if(mission === "Hava Durumu Uydusu"){
+    r = Math.floor(Math.random()*20)+70;
+    e = Math.floor(Math.random()*15);
+    l = 100 - r - e;
+  }
+
+  else if(mission === "Askeri Uydu"){
+    r = Math.floor(Math.random()*30)+50;
+    e = Math.floor(Math.random()*30);
+    l = 100 - r - e;
+  }
+
+  else if(mission === "GPS Uydusu"){
+    r = Math.floor(Math.random()*15)+80;
+    e = Math.floor(Math.random()*10);
+    l = 100 - r - e;
+  }
+
+  chart.data.datasets[0].data = [r,e,l];
+  chart.update();
+
+  document.getElementById("stats").innerText =
+    `${mission} → Kurtarılan: %${r} | Hatalı: %${e} | Kayıp: %${l}`;
+
+  alert(mission + " analizi tamamlandı 🚀");
+}
+
+// RANDEVU
+function appoint(){
+  let n=document.getElementById("name").value;
+  let d=document.getElementById("date").value;
+
+  if(!n||!d){alert("Doldur");return;}
+
+  localStorage.setItem("r",n+"-"+d);
+  document.getElementById("result").innerText="Kaydedildi!";
+}
+
+// AI
+function openAI(){
+  aiBox.style.display="block";
+  add("AI","Komut: analiz başlat");
+}
+
+function send(){
+  let m=msg.value.toLowerCase();
+  add("Sen",m);
+
+  if(m.includes("analiz")){
+    simulate();
+    add("AI","Analiz başlatıldı 🚀");
+  } else if(m.includes("randevu")){
+    show("services");
+    add("AI","Randevu sayfasına yönlendirdim");
+  } else {
+    add("AI","Komutlar: analiz başlat, randevu al");
+  }
+
+  msg.value="";
+}
+
+function add(s,t){
+  chat.innerHTML+=`<p><b>${s}:</b> ${t}</p>`;
+}
+
+// YILDIZ
+let c=document.getElementById("stars");
+let ctx=c.getContext("2d");
+c.width=window.innerWidth;
+c.height=window.innerHeight;
+
+let stars=[];
+for(let i=0;i<120;i++){
+  stars.push({x:Math.random()*c.width,y:Math.random()*c.height});
+}
+
+function draw(){
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.fillStyle="white";
+  stars.forEach(s=>{
+    ctx.fillRect(s.x,s.y,2,2);
+    s.y+=0.6;
+    if(s.y>c.height) s.y=0;
+  });
+  requestAnimationFrame(draw);
+}
+draw();
+
+</script>
+
+</body>
+</html>
